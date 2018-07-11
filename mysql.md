@@ -5,6 +5,7 @@
 - - - - -
 # 2、库操作
 ## 2.1 新增数据库
+
 基本语法：
 ``` SQL
 create database 数据库名称 数据库选项;
@@ -52,13 +53,14 @@ alter database mydatabase charset gdk;
 ## 2.4 删除数据库
 基本语法：
 ``` SQL
-drop database 数据库名称
+drop database 数据库名称;
 ```
 注意：
 - 删除是不可逆操作，删除之前要先备份数据库
 - - - - -
 # 3、表操作
 ## 3.1 新增表
+
 基本语法：
 ``` SQL
 create table [if not exists] 表名(
