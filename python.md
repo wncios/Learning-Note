@@ -1,5 +1,3 @@
-# Content
-[TOC]
 # Data Structure
 
 ## list
