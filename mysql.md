@@ -523,7 +523,6 @@ create table my_class (
     room varchar(20) null -- 显示声明为空，实际上，默认就为空
 ) engine InnoDB charset utf8;
 ```
-
 ``` SQL
 mysql> desc my_class;
 +-------+-------------+------+-----+---------+-------+
@@ -546,6 +545,16 @@ create table my_friend(
 ) engine InnoDB charset utf8;
 ```
 
+```` SQL
+mysql> desc my_friend;
++-------+-------------+------+-----+---------+-------+
+| Field | Type        | Null | Key | Default | Extra |
++-------+-------------+------+-----+---------+-------+
+| name  | varchar(20) | NO   |     | NULL    |       |
+| age   | tinyint(4)  | NO   |     | NULL    |       |
++-------+-------------+------+-----+---------+-------+
+2 rows in set (0.00 sec)
+```
 - - - - -
 
 ## 11.3、默认值
