@@ -544,6 +544,7 @@ create table my_friend(
     age tinyint not null comment '年龄'
 ) engine InnoDB charset utf8;
 ```
+
 ```` SQL
 mysql> desc my_friend;
 +-------+-------------+------+-----+---------+-------+
@@ -566,6 +567,7 @@ mysql> show create table my_friend;
 1 row in set (0.00 sec)
 ```
 - - - - -
+
 ## 11.3、默认值
 默认值：default，某一数据会经常性出现某个具体的值，因此可以在开始的时候就制定好，而在需要真实数据的时候，用户可以选择性的使用默认值。
 
@@ -577,6 +579,7 @@ create table my_default(
     gender enum('男', '女') default '男'
 ) engine InnoDB charset utf8;
 ```
+
 ``` SQL
 mysql> insert into my_default(name) values('Harlon');
 Query OK, 1 row affected (0.00 sec)
