@@ -1144,6 +1144,66 @@ mysql> select * from my_copy;
 删除表的数据，自增长不会还原，如果想要还原自增长属性，思路是：先删除表，然后重新建表。
 基本语法：
 ``` SQL
-truncate 表名
+truncate 表名;
 ```
+- - - - -
+# 18、查询高级操作
+基本语法：
+``` SQL
+select 字段列表/* from 表名 [where 条件]
+```
+完整语法：
+``` SQL
+select [select 选项] 字段列表[字段别名]/* from 数据源 [where条件]
+[1] [2] [3]
+```
+- [1] = [group by 子句]
+- [2] = [order by 子句]
+- [3] = [limit 子句]
+- - - - -
+## 18.1 select 选项
+select选项，即select对查出来的结果的处理方式。
+- all：默认，保留所有的查询结果
+- distinct：去重，将查出来的结果中所有字段相同的记录去除
+
+实例：
+``` SQL
+select * from my_copy;
+select all * from my_copy;
+select distinct * from my_copy;
+```
+- - - - -
+## 18.2 字段别名
+字段别名，即当数据进行查询的时候，有时候字段的名字不一定满足需求（特别地，在多表查询的时候，很有可能会有同名字段），这就需要对字段进行重命名、取别名。
+基本语法：
+``` SQL
+字段名 as 别名;
+```
+
+实例：
+``` SQL
+select id name as n age as a grade as g from student;
+```
+- - - - -
+## 18.3 数据源
+数据源，即数据的来源，关系型数据库的数据源都是数据表，本质上只要保证数据类型二维表，最终就可以做为数据源。
+数据源分为3种，分别为：单表数据源，多表数据源和查询语句。
+第1种：单数据源
+基本语法：
+``` SQL
+select * from 表名;
+```
+
+第2种：多数据源
+基本语法：
+``` SQL
+select * from 表名1, 表名2
+```
+
+第3种：查询语句（子查询）
+基本语法：
+``` SQL
+select * from (select * from 表名) [as] 别名;
+```
+- - - - -
 
