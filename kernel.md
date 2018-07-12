@@ -56,7 +56,7 @@ do patch -p1 < ../patch/"$i";done
 - make xconfig
 
 配置之后会产生.config文件
-内核编译
+内核编译：
 - make -jn
 - make modules_install
 - make install
