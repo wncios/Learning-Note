@@ -5,7 +5,6 @@
 ``` shell
 git clone https://github.com/torvalds/linux.git
 ```
-
 - - - - -
 ## 安装内核源码
 ``` shell
