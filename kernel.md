@@ -54,12 +54,14 @@ do patch -p1 < ../patch/"$i";done
 - make menuconfig
 - make defconfig
 - make xconfig
+
 配置之后会产生.config文件
 内核编译
 - make -jn
 - make modules_install
 - make install
 - depmod
+
 模块安装到/lib/modues
 
 
