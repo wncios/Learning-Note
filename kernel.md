@@ -55,7 +55,7 @@ do patch -p1 < ../patch/"$i";done
 - make defconfig
 - make xconfig
 
-配置之后会产生.config文件
+配置之后会产生.config文件  
 内核编译：
 - make -jn
 - make modules_install
