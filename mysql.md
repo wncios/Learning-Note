@@ -1206,4 +1206,161 @@ select * from 表名1, 表名2
 select * from (select * from 表名) [as] 别名;
 ```
 - - - - -
+## 18.4 where子句
+where子句：用来判断数据和筛选数据，返回的结果为0或者1，其中0代表false，1代表true，where是唯一一个直接从磁盘获取数据的时候就开始判断的条件，从磁盘中读取一条数据，就开始where判断，如果判断的结果为真，则保持，反之，不保存。
+判断条件：
+- 比较运算符：>、<、>=、<=、<>、=、like、between and、in和not in
+- 逻辑运算符：&&、||、和!
 
+实例：
+``` SQL
+select * from student where id = 2 || id = 3 || id = 5;
+select * from student where id in (2,3,5);
+select * from student where if between 2 and 5;
+```
+- - - - -
+## 18.5 group by 子句
+group by 子句：根据表中的某个字段进行分组，即将含有相同字段值的记录放在一组，不同的放在不同组。
+基本语法：
+``` SQL
+group by 字段名;
+```
+
+实例：
+``` SQL
+select * from student group by sex;
+```
+分组的目标是为了（按分组字段）统计数据，并不是为了单纯为了方便统计数据，SQL提供了一些列的统计函数，例如：
+- count()：统计分组后，每组的记录数；
+- max()：统计每组中的最大值；
+- min()：统计每组中的最小值；
+- avg()：统计每组中的平均值；
+- sum()：统计每组中的数据总和；
+
+实例：
+``` SQL
+select sex,count(*),max(age),min(age),avg(age),sum(age) from student group by sex;
+```
+其中，count()函数可以使用两种参数，分为为：*表示统计组内全部记录的数量；字段名表示统计对应字段的非null（如果某条记录中该字段的值为null，则不统计）记录的总数。此外，使用group by进行分组之后，展示的记录会根据分组的字段值进行排序，默认为升序。当然，也可以人为的设置升序和降序。
+基本语法：
+``` SQL
+group by 字段名 [asc/desc]
+```
+
+实例：
+``` SQL
+select sex, count(*) from student group by sex;
+select sex, count(*) from student group by sex asc;
+select sex, count(*) from student group by sex desc;
+```
+
+多字段分组：
+``` SQL
+select *, count(*) from student group by grage, sex;
+```
+group_concat(字段名)可以对分组的结果中的某个字段值进行字符串链接，即保留该组某个字段的所有值，例如：
+``` SQL
+select sex, age, count(*), group_concat(name) from student group by sex;
+```
+回溯统计：利用with rollup关键字，可以在每次分组之后，根据当前分组的字段进行统计，并向上一级分组进行汇报，例如：
+``` SQL
+select sex, count(*) from student group by sex with rollup;
+```
+- - - - -
+## 18.6 having 子句
+having子句：与where子句一样，都是进行条件判断的，但是where是针对磁盘数据进入内存之后，会进行分组操作，分组结果就需要having来操作。思考可以，having能做where能做的几乎所有事情，但是where却不能做having能做的很多事情。
+第1点：分组统计的结果或者说统计函数只有having能够使用
+
+实例：
+``` SQL
+select grage, count(*) from student group by grade having count(*) >= 2;
+```
+
+第2点：having能够使用字段别名，where则不能
+
+实例：
+``` SQL
+select grage, count(*) as total from student group by grade having total >= 2;
+```
+- - - - -
+## 18.7 order by子句
+order by子句：根据某个字段进行升序或者降序排序，依赖校对集。
+基本语法：
+``` SQL
+order by 字段 asc/desc
+```
+其中，asc为升序，desc为降序。
+
+实例：
+``` SQL
+select * from student order by age;
+```
+多字段排序，即先根据某个字段进行排序，然后在排序后的结果中，再根据某个字段进行排序。
+
+实例：
+``` SQL
+select * from student order by age, grade desc;
+```
+- - - - -
+18.8 limit子句
+limit子句：是一种限制结果的语句，通常来限制结果的数量。
+基本语法：
+``` SQL
+limit [offset] length;
+```
+其中，offset为起始值，length为长度。
+第1种，只用来限制长度（数据量）
+实例：
+``` SQL
+select * from student;
+select * from student limit 3;
+```
+第2种：限制起始值，限制长度（数据量）
+实例：
+``` SQL
+select * from student limit 0,2
+select * from student limit 2,2
+```
+第3种：主要用来实现数据的分页，目的是为了节省时间，提高服务器的响应效率，减少资源的浪费。
+- - - - -
+# 19、连接查询
+连接查询：将多张表（大于等于2张表）按照某个指定的条件进行数据的拼接，其最终结果记录数可能有变化，但字段一定会增加。
+连接查询的意义：在用户查询的时候，需要显示的数据来自多张表。
+连接查询为join，使用方式为：左表 join 右表
+- 左表：join 左表的表
+- 右表：join 右边的表
+
+连接查询分类：在SQL中将连接查询分为四类：分别为内连接、外链接、自然连接和交叉连接。
+## 19.1 交叉连接
+交叉连接：cross join，从一张表中循环取出每条记录，每条记录都去另外一张表进行匹配，匹配的结果都保留（没有条件匹配），而连接本身的字段会增加，最终形成的结果为笛卡尔积形式。
+基本语法：
+``` SQL
+左表 cross join 右表;
+```
+其结果与多表查询相同。
+实例：
+``` SQL
+select * from student cross join class;
+select * from student, class;
+```
+实际上，笛卡尔积形式（交叉连接和多表查询）的结果并没有什么实际意义，应该尽量避免，其存在的价值就是保证连接这种结构的完整性。
+- - - - -
+## 19.2 内连接
+内连接：inner join，从左表中取出每一条记录，和右表中的所有记录进行匹配，仅当某个条件在左表和右表的值相同时，结果才会保留，否则不保留。
+基本语法：
+``` SQL
+左表 [inner] join 右表 on 左表.字段 = 右表.字段;
+```
+其中，关键字on表示连接条件，两表中的条件字段有着相同的业务含义。
+实例：
+``` SQL
+select * from student inner join class on student.grade = class.grade;
+select * from student  join class on student.grade = class.grade;
+```
+注意：
+如果两表中有某个表的条件字段名唯一，那么在书写连接条件的时候，可以省略表名，直接书写字段名，MySQL 会自动识别唯一字段名，但不建议这么做。此外，咱们会发现，在上面的结果中有同名字段，这会给咱们理解数据的意义造成一定的困扰，这时就需要使用字段别名和表别名做区别啦！
+实例：
+``` SQL
+select s.*, c.id as c_id, c.grade as c_grade, room from student as s inner join class as c on s.grade = c.grade;
+```
+最后，内连接可以可以没有连接条件，即可以没有on及之后的内容，这时内连接的结果全部保留，与交叉连接的结果完全相同。而且在内连接的时候可以使用where关键字代替on，但不建议这么做，因为where没有on的效率高。
