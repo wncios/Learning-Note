@@ -199,7 +199,8 @@ struct thread_info {
 };
 ```
 `thread_info`的地址在栈顶，如下图所示：
-<div align=center><img width="150" src="https://github.com/Harlonxl/Learning-Note/blob/master/image/thread_info.png"/></div>
+<div align=center><img width="500" src="https://github.com/Harlonxl/Learning-Note/blob/master/image/thread_info.png"/></div>
+
 - - - - -
 
 ### 2.1.3 进程状态
