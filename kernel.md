@@ -145,15 +145,27 @@ struct task_struct {
     /** 进程状态 */
     volatile long state;	 /* -1 unrunnable, 0 runnable, >0 stopped */
     ...
+    /** 进程描述符链表 */
+    struct list_head tasks;
+	struct plist_node pushable_tasks;
+    /** 虚拟内存结构 */
+	struct mm_struct *mm, *active_mm;
+    ...
     /** 进程PID */    
     pid_t pid; 
 	pid_t tgid;
 	...
+	struct task_struct *real_parent; /* real parent process */
+	/** 父进程进程描述符 */
+	struct task_struct *parent;
+	/** 子进程链表 */
+	struct list_head children;
+	...
 	/** 文件系统信息 */
 	struct fs_struct *fs;
-/** 进程打开文件的信息 */
+    /** 进程打开文件的信息 */
 	struct files_struct *files;
-/** 命名空间 */
+    /** 命名空间 */
 	struct nsproxy *nsproxy;
     ...
 }
@@ -204,4 +216,20 @@ struct thread_info {
 - - - - -
 
 ### 2.1.3 进程状态
-进程描述符`state`域描述了当前进程的状态，
+进程描述符`state`域描述了当前进程的状态，系统中的每个进程必然处于五种进程状态中的一种：
+- `TASK_RUNING`：运行状态，进程时可运行的，它或者正在执行，或者在运行队列找那个等待运行。
+- `TASK_INTERRUPTIBLE`：可中断，进程正在睡眠，等待某些条件的达成。一旦条件达成，内核就会把进程状态置为运行，处于此状态的进程也会因为接收到信号而提前被唤醒并随时准备投入运行。
+- `TASK_UNINTERRUPTIBLE`：不可屏蔽，除了就算接收到信号也不会被唤醒或准备投入运行外，这个状态与可中断状态相同。
+- `_TASK_TRACED`：被其他进程跟踪的进程，例如通过`ptrace`对调试程序进行跟踪。
+- `_TASK_STOPPED`：停止状态，进程停止运行。
+<div align=center><img width="800" src="https://github.com/Harlonxl/Learning-Note/blob/master/image/task_state.jpeg"/></div>
+<div align=center>进程状态转化图</div>
+- - - - -
+### 2.1.4 设置当前进程状态
+通过函数`set_task_state(task, state)`函数来设置，必要的时候设置内存屏障来强制其他处理器作重新排序。否则，等同于：
+``` C
+task->state = state;
+```
+- - - - -
+### 2.1.5 进程上下文
+当一个程序执行了系统调用或者触发了某个异常，就陷入了内核空间，此时，我们称内核“代表进程执行”并处于进程上下文中，在此上下文中`current`宏是有效的。
