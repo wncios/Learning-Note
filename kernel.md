@@ -84,12 +84,32 @@ do patch -p1 < ../patch/"$i";done
 - 查看内核模块：`lsmod`
 - 删除内核模块：`rmmod HelloWorld.ko`
 - - - - -
-
-# 2、进程管理和进程调度
-# 2.1 进程
+## 1.7 第一个内核模块程序
+`HelloWord.c`
+``` C
+#Include <linux/init.h>
+#Include <linux/module.h>
+MODULE_LICENSE("Dual BAD/GPL")
+static int hello_init(void) {
+    printk(KERN_INFO "Hello, world!\n");
+    printk("Hello: module loaded at 0x%p", hello_init);
+    printk("HZ = %d\n", HZ);
+}
+static void hello_exit(void) {
+    printk(KERN_INFO "Goodbye, cruel word!\n"); 
+    printk("By: module loaded at 0x%p\n", hello_exit);
+}
+module_init(hello_init);
+module_exit(hello_exit);
+MODULE_AUTHOR("harlonxl@gmail.com");
+MODULE_DESCRIPTION("Hello world, first kernel module");
+```
+- - - - -
+# 2、进程管理
+## 2.1 进程
 - 进程就是处于运行期的程序以及相关资源的总称，是操作系统进行资源分配和调度的基本单位，进程通常包含一些资源，例如打开的文件描述符，挂起的信号，内核内部数据，处理器状态，一个或者多个具有内存映射的内存地址空间及一个或多个执行线程，还有用来存放全局变量的数据段等。
 - 执行线程是在进程中的活动对象，是CPU调度的最小单位，每个线程拥有独立的程序计数器，进程栈和一组进程寄存器。
-- Linux系统下查看进程：
+- linux系统下查看进程：
 ``` shell
 # ps aux
 USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
@@ -117,5 +137,70 @@ root        26  0.0  0.0      0     0 ?        SN   Jun07   0:00 [ksmd]
 - `a`：打印所有进程
 - `u`：以用户为主打印进程
 - `x`：显示所有进程，不区分终端
+- - - - -
+## 2.1 进程描述符及任务结果
+进程描述符`task_struct`，该结构定义在`<linux/sched.h>`中，放在一个双向循环循环链表。
+``` C
+struct task_struct {
+    /** 进程状态 */
+    volatile long state;	 /* -1 unrunnable, 0 runnable, >0 stopped */
+    ...
+    /** 进程PID */    
+    pid_t pid; 
+	pid_t tgid;
+	...
+	/** 文件系统信息 */
+	struct fs_struct *fs;
+/** 进程打开文件的信息 */
+	struct files_struct *files;
+/** 命名空间 */
+	struct nsproxy *nsproxy;
+    ...
+}
+```
+查看linux系统中`pid`的最大值：
+``` shell
+# cat /proc/sys/kernel/pid_max 
+32768
+```
+- - - - -
+### 2.1.1 分配进程描述符
+linux是通过`slab`分期器来分配 `task_struct`结构，这样能达到对象复用和缓存着色`(cache coloring)`的目的。
+- - - - -
+### 2.1.2 进程描述符的存放
+在内核中，访问任务通常要获得指向task_struct的指针，可以通过`current`宏查找当前正在运行进程的进程描述符。硬件体系不同，这个宏的实现是不同的，例如：`PowerPC`中，专门有一个寄存器来存放该宏，而对于`x86`这种寄存器比较缺的体系结构，只能在栈的尾端创建`thread_info`结构，通过计算偏移间接地查找 `task_sturct`结构。
+在`x86`系统中，`current`把栈指针的后13个有效位屏蔽掉，用来计算`thread_info`的偏移，该操作是通过`current_thread_info()`函数来完成的。
+```C
+static inline struct thread_info *current_thread_info(void)
+{
+	return (struct thread_info *)
+		(current_stack_pointer & ~(THREAD_SIZE - 1));
+}
+```
+`thread_info`结构体如下：
+``` C
+struct thread_info {
+	struct pcb_struct	pcb;		/* palcode state */
 
+	struct task_struct	*task;		/* main task structure */
+	unsigned int		flags;		/* low level flags */
+	unsigned int		ieee_state;	/* see fpu.h */
 
+	struct exec_domain	*exec_domain;	/* execution domain */
+	mm_segment_t		addr_limit;	/* thread address space */
+	unsigned		cpu;		/* current CPU */
+	int			preempt_count; /* 0 => preemptable, <0 => BUG */
+
+	int bpt_nsaved;
+	unsigned long bpt_addr[2];		/* breakpoint handling  */
+	unsigned int bpt_insn[2];
+
+	struct restart_block	restart_block;
+};
+```
+`thread_info`的地址在栈顶，如下图所示：
+![](https://github.com/Harlonxl/Learning-Note/blob/master/image/thread_info.png)
+- - - - -
+
+### 2.1.3 进程状态
+进程描述符`state`域描述了当前进程的状态，
