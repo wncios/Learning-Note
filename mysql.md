@@ -730,7 +730,7 @@ alter table 表名 modify 字段 类型
 alter table my_auto modify id int;
 ```
 - - - - -
-## 11.6、唯一键
+## 11.6 唯一键
 唯一键：每张表往往有多个字段需要具有唯一性，数据不能重复，但是在每个表中，只能有一个主键，因此唯一键就是用来解决表中多个字段具有唯一性的问题。  
 唯一键的本质与主键差不多，唯一键默认的允许字段为空，而且可以多个字段为空，因此空字段不参与唯一性的比较。  
 
@@ -1365,3 +1365,351 @@ select * from student  join class on student.grade = class.grade;
 select s.*, c.id as c_id, c.grade as c_grade, room from student as s inner join class as c on s.grade = c.grade;
 ```
 最后，内连接可以可以没有连接条件，即可以没有on及之后的内容，这时内连接的结果全部保留，与交叉连接的结果完全相同。而且在内连接的时候可以使用where关键字代替on，但不建议这么做，因为where没有on的效率高。
+- - - - -
+## 19.3 外链接
+外链接：`left\right join`，以某张表为主表，取出里面的所有记录，然后让主表中的每条记录都与另外一张表进行连接，不管是否匹配成功，其最终结果都会保留，匹配成功，则正确保留；匹配失败，则将另一张表的字段都置为`NULL`。  
+基本语法：
+``` SQL
+左表 left\right join 右表 on 左表.字段 = 右表.字段
+```
+其中，`on`表示连接条件，两表的字段有着相同的含义。在这里，以主表为依据，外连接分为两种，分别为：
+- `left join`：左外连接（左连接），以左表为主表；
+- `right join`：右外连接（右连接），以右表为主表；
+
+实例：
+``` SQL
+select s.*, c.id as c_id, c.grade as c_grade, room from student as s left join class as c on s.grade = c.grade;
+select s.*, c.id sd c_id, c.grade as c_grade, room from student as s right join class as c on s.grade = c.grade;
+```
+实际上，无论以那张表为主表，其外连接的结果（记录数量）都不会少于主表的记录总数。此外，虽然左连接与右连接有主表差异，但显示的结果都是：左表的数据在左边，右表的数据在右边。
+- - - - -
+## 19.4 自然连接
+自然连接：`nature join`，自然连接其实就是自动匹配连接条件，系统以两表中同名字段作为匹配条件，如果两表有多个同名字段，那就都作为匹配条件。在这里，自然连接可以分为自然内连接和自然外连接。  
+
+自然内连接：  
+基本语法：  
+``` SQL
+左表 + natural + join + 右表;
+```
+
+实例：
+``` SQL
+select * from student natural join class;
+```
+自然连接自动使用同名字段作为连接条件，而且在连接完成之后合并同名字段。  
+
+自然外连接：
+基本语法：
+``` SQL
+左表 natural left/right join 右表
+```
+
+实例：
+``` SQL
+select * from student natural left join class;
+select * from student natural right join class;
+```
+实际上，自然连接并不常用。而且，咱们可以用内连接和外连接来模拟自然连接，模拟的关键就在于使用同名字段作为连接条件及合并同名字段。  
+基本语法：
+``` SQL
+左表 inner/left/right join 右表 using(字段名);
+```
+
+实例：
+``` SQL
+select * from student natural left join class;
+select * from student left join class using(id, grade);
+```
+- - - - -
+# 20、外键
+外键：`foreign key`，外面的键，即不在自己表中的键。如果一张表中的有一个非主键的字段指向另外一张表的主键，那么该字段称之为主键。每张表中，可有有多个主键。  
+
+## 20.1 外键操作
+新增主键：  
+主键即可以再创建表的时候增加，也可以在创建之后增加（但是要考虑数据的问题）。  
+第1种：在创建表的时候，增加外键。  
+基本语法：  
+``` SQL
+foreign key(外键字段) references 外部表名(主键字段);
+```
+
+实例：
+``` SQL
+create table my_foreign1(
+    id int primary key auto_increment,
+    name varchar(20) not null comment '学生姓名',
+    c_id int comment '班级表ID',
+    foreign key(c_id) references my_class(id)
+) engine InnoDB charset utf8;
+```
+``` SQL
+mysql> desc my_foreign1;
++-------+-------------+------+-----+---------+----------------+
+| Field | Type        | Null | Key | Default | Extra          |
++-------+-------------+------+-----+---------+----------------+
+| id    | int(11)     | NO   | PRI | NULL    | auto_increment |
+| name  | varchar(20) | NO   |     | NULL    |                |
+| c_id  | int(11)     | YES  | MUL | NULL    |                |
++-------+-------------+------+-----+---------+----------------+
+3 rows in set (0.00 sec)
+
+```
+`c_id`的`key`显示为`MUL`，表示多个键的意思。这是因为外键要求字段本身是一个索引（普通索引）如果字段本身没有索引，外键就会先创建一个索引，然后才创建外键本身。  
+
+第2中：在创建表之后，增加外键  
+基本语法：  
+``` SQL
+alter table 表名 add[constraint 外键名字] foreign key(外键字段) + references 外键表名(主键字段);
+```
+
+实例：
+``` SQL
+create table my_foreign2 (
+    id int primary key auto_increment,
+    name varchar(20) not null comment '学生姓名',
+    c_id int comment '班级表ID'
+) engine InnoDB charset utf8;
+
+alter table my_foreign add constraint test_foreign foreign key(c_id) references my_class(id);
+```
+
+修改外键 & 删除外键  
+外键不能修改，只能先删除后增加。  
+基本语法：
+``` SQL
+alter table 表名 drop foreign key 外键名字;
+```
+
+实例：
+``` SQL
+alter table my_foreign2 drop foreign key test_foreign;
+```
+- - - - -
+## 20.2 外键作用
+首先，给出父表和子表的定义：
+- 父表：指外键所指向的表；
+- 子表：指相对于父表，拥有外键的表；
+外键默认的作用有两个，分别对子表和父表进行约束。  
+第1种：约束子表  
+在子表进行数据的写操作（增和改）的时候，如果对应的外键字段在父表中找不到对用的匹配，那么操作会失败。
+
+实例：
+``` SQL
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'ls' at line 1
+mysql> insert into my_foreign1 values(null, 'Harlon', 1);
+ERROR 1452 (23000): Cannot add or update a child row: a foreign key constraint fails (`test`.`my_foreign1`, CONSTRAINT `test_foreign` FOREIGN KEY (`c_id`) REFERENCES `my_class` (`id`))
+mysql> insert into my_class values(null, 'class-1', 'A301');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> insert into my_foreign1 values(null, 'Harlon', 1);
+Query OK, 1 row affected (0.01 sec)
+```
+
+第2中：约束父表
+在父表进行数据的写操作（删和改，且涉及主键）的时候，如果对应的主键在子表中已经被数据引用，那么操作就会失败。  
+
+实例：
+``` SQL
+update my_class set id = 5 where id = 1;
+```
+- - - - -
+## 20.3 外键条件
+在我们使用外键的时候，应该遵循如下条件：
+- 外键要存在，首先必须保证表的引擎是InnoDB（默认的存储引擎），如果不是InnoDB存储引擎，那么主键可以创建成功，但没有约束作用；
+- 外键的字段的字段类型（列类型），必须与父表的主键类型完全一致；
+- 每张表中的外键名称不能重复；
+- 增加外键的字段，如果数据已经存在，那么要要求数据与父表中的主键对应；
+
+- - - - -
+## 20.4 外键约束
+所谓的外键约束，就是指外键的作用。之前所讲的外键的作用都是默认的作用，实际上，可以通过对外键的需求，进行定制操作。  
+外键约束有三种模式，分别为：
+- `distrinct`：严格模式（默认），父表不能删除或更新一个已经被子表数据所引用的记录
+- `cascade`：级联模式，父表的操作，对应父表关联的数据也跟着删除
+- `set null`：置空模式，父表的操作之后，子表对用的数据（外键字段）被置空
+
+基本语法：
+``` SQL
+foreign key(外键字段) references 父表(主键字段) [on delete 模式 on update 模式];
+```
+通常一个合理的做法（约束模式）是：删除的时候，子表被置空；更新的时候，子表进行级联操作。
+
+实例：
+``` SQL
+create table my_foreign4 (
+    id int primary key auto_increment,
+    name varchar(20) not null,
+    c_id int,
+    foreign key(c_id) references my_class(id) on delete set null on update cascade
+) engine InnoDB charset utf8;
+```
+外键的功能十分强大，但是在开发过程中，由于外键的存在，使得开发变得困难不可控，所以一般都不使用外键。
+- - - - -
+# 21、联合查询
+联合查询：`union`，将多次查询（多条select语句）的结果，在字段数相同的情况下，在记录的层次上进行拼接。  
+基本语法：  
+联合查询由多条`select`语句构成，每条`select`语句获取的字段数相同，但与字段类型无关。    
+基本语法：  
+``` SQL
+select 语句1 union [union选项] select 语句2;
+```
+
+实例：
+``` SQL
+mysql> select * from my_class union distinct select * from my_class;
++----+---------+------+
+| id | grade   | room |
++----+---------+------+
+|  1 | class-1 | A301 |
++----+---------+------+
+1 row in set (0.00 sec)
+
+mysql> select * from my_class union all select * from my_class;
++----+---------+------+
+| id | grade   | room |
++----+---------+------+
+|  1 | class-1 | A301 |
+|  1 | class-1 | A301 |
++----+---------+------+
+
+```
+
+联合查询只要求字段数相同，而跟类型无关。执行如下`SQL`语句，实例：  
+``` SQL
+select id, grade, room from my_class union distinct select name, grade, id from Student;
+```
+
+意义：  
+- 查询同一张表，例如查询学生信息，要求男孩按年龄升序排序，女生按年龄降序排序
+- 多表查询，多张表的结构是完全一样的，保持的数据结构也是一样的
+
+此外，如果数据量非常的大，就要进行分表（垂直分表和水平分表），而分表的依据无外乎数据多不多和常不常用。  
+
+- - - - -
+# 22、子查询
+子查询：`sub query `，查询时在某个查询结果上进行的，一条select语句内部包含了另外一条select语句。  
+
+分类：  
+子查询有两种分类方式，分别为：按结果分类和位置分类。  
+按结果分类，即根据子查询得到的数据进行分类（理论上，任何一个查询结果都可以理解为一个二维表），分别为：
+- 标量子查询：子查询得到的结果是一行一列，出现的位置在`where`之后
+- 列子查询：子查询得到的结果是一行多列，出现的位置在`where`之后
+- 行子查询：子查询得到的结果是多行一列（多行多列），出现的位置在`where`之后
+- 表子查询：子查询得到的结果是多行多列，出现的位置在`from`之后。
+
+按位置分类，即根据子查询（`select`语句）在外部查询（`select`语句）中出现的位置进行分类，分别为：
+- `from`子查询：子查询出现在`from`之后
+- `where`子查询：子查询出现在`where`条件之后
+- `exists`子查询：子查询出现在`exists`里面
+
+## 22.1 标量子查询
+需求：知道班级号，想要获取该班的全部学生。  
+思路：  
+- 先确定数据源，学生表
+``` SQL
+select * from student where c_id = ?;
+```
+- 然后获取班级ID，通过班级表来确定
+``` SQL
+select id from class where grade = "class-1";
+```
+- 合并
+``` SQL
+select * from student where c_id = (select id from class where grade = 'class-1');
+```
+
+## 22.2 列子查询
+需求：查询所有在读班级（学生表存在的班级）的学生。  
+思路：  
+- 先确定数据源，学生表
+``` SQL
+select * from student where c_id in ?;
+```
+- 然后确定全部有效的班级ID
+``` SQL
+select id from class;
+```
+- 合并：
+``` SQL
+select * from student where c_id in (select id from class);
+```
+
+在列子查询的结果为一行多列时，我们需要使用`in`作为条件来进行匹配；此外，在MySQL中还有三个类似的条件，分别为：`all`、`some`和`any`。
+- `any`等价于`in`，表示其中一个；
+- `any`等价于`some`，而`any`和`some`用于否定时却有些区别
+- `all`表示等于全部
+
+值得注意的是，在我们使用上面三个关键字中任何一个的时候，都需要搭配`=`使用，例如：
+``` SQL
+select * from student where c_id = any (select id from class);
+select * from student where c_id = some (select id from class);
+select * from student where c_id = all (select id from class);
+```
+否定用法：
+``` SQL
+select * from student where c_id != any (select id from class);
+select * from student where c_id != some (select id from class);
+select * from student where c_id != all (select id from class);
+```
+- - - - -
+## 22.3 行子查询
+行子查询，返回的结果可以是一行多列或者多列多行。  
+需求：查询学生表中，年龄最大且身高最高的学生。  
+思路：  
+- 先确定数据源，学生表
+``` SQL
+select * from student where age = ? and height = ?;
+```
+- 然后确定最大年龄和最大身高
+``` SQL
+select max(age), max(height) from student;
+```
+- 合并
+``` SQL
+select * from student where (age, height) = (select max(age), max(height) from student);
+```
+- - - - -
+## 22.4 表子查询
+表子查询，返回的结果是多行多列二维表（将子查询的结果当做二维表来使用），实际上查询的返回结果都可以称之为二维表。  
+需求：找出每个班身高最高的学生。  
+思路：  
+- 先确定数据源，将学生按身高进行降序排序
+``` SQL
+select * from student order by height desc;
+```
+- 从每个班级选出第一个学生
+``` SQL
+select * from student group by c_id;
+```
+- 合并
+``` SQL
+select * from (select * from student order by height desc) as student group by c_id;
+```
+- - - - -
+## 22.5 exists子查询
+`exists`：表示是否存在的意思，因此`exists`子查询就是用来判断某些条件是否满足（跨表），`exists`是接在`where`之后，其返回的结果为`1`或`0`，满足条件为`1`，反之为`0`。  
+需求：在班级存在的前提下，查询所有的学生。  
+思路：  
+- 先确定数据源：
+``` SQL
+select * from student where ?;
+```
+- 然后确定条件是否满足
+``` SQL
+exists(select * from class);
+```
+- 合并：
+``` SQL
+select * from student where exists(select * from class);
+
+select * from student where exists(select * from class where id  = 3);
+
+select * from student where exists(select * from class where id = 100);
+```
+
+
+
+
+
+
+
