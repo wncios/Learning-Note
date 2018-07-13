@@ -224,6 +224,7 @@ struct thread_info {
 - `_TASK_STOPPED`：停止状态，进程停止运行。
 <div align=center><img width="800" src="https://github.com/Harlonxl/Learning-Note/blob/master/image/task_state.jpeg"/></div>
 <div align=center>进程状态转化图</div>
+
 - - - - -
 ### 2.1.4 设置当前进程状态
 通过函数`set_task_state(task, state)`函数来设置，必要的时候设置内存屏障来强制其他处理器作重新排序。否则，等同于：
