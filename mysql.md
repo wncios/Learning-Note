@@ -2140,5 +2140,18 @@ delimiter
   
 根据上述案例的需求，我们创建两张表，商品表goods和订单表orders，SQL语句如下：  
 ``` SQL
+create table goods(
+    id int primary key auto_increment,
+    name varchar(20) not null,
+    price decimal(10, 2) default 0.0,
+    inventory int comment '商品库存量'
+) engine InnoDB charset utf8;
 
+insert into goods values(null, 'iPhoneX', 7488, 1000), (null, 'iPhone8', 5088, 1000);
+
+create table orders(
+    id int primary key auto_increment,
+    goods_id int not null,
+    goods_number int default 1
+) engine InnoDB charset utf8;
 ```
