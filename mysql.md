@@ -1707,9 +1707,425 @@ select * from student where exists(select * from class where id  = 3);
 select * from student where exists(select * from class where id = 100);
 ```
 
+- - - - -
+# 23、视图
+视图：view，是一种有结构（有行有列），但没有结果（结构中不真实存在数据）的虚拟表，虚拟表的结构来源不是自己定义的，而是从对应的基表（视图的数据来源）中产生的。
+## 23.1 创建视图
+首先，给出创建视图的基本语法：  
+基本语法：  
+``` SQL
+create view 视图名 as select 语句;
+```
+其中，select语句可以使普通查询，也可以是连接查询、联合查询、子查询等。  
+此外，视图根据数据的来源，可以分为单表视图和多表视图：  
+- 单表视图：基表只有一个
+- 多表视图：基表至少两个
 
+实例：
+``` SQL
+-- 单表视图
+create view my_v1 as select * from student;
+create view my_v2 as select * from my_class;
 
+-- 多表视图
+create view my_v3 as select s.*, c.grade, c.room from student as s left join my_class c on s._cid = c.id;
+```
+- - - - -
+## 23.2 查询视图
+这里的查询视图是指查看视图的结构，而不是查看视图的结果。  
+由于视图是一张虚拟表，因此标的所有查询语句，都使用于视图，例如：  
+``` SQL
+desc 视图名;
+show create table 视图名;
+show create view 视图名;
+```
+此外，视图一旦创建，系统就会在视图对用的数据库文件夹下创建一个对应的frm结构文件，以保证结构的完整性。
+- - - - -
+## 23.3 使用视图
+在操作数据库表的过程中，使用视图，主要就是为了查询，因此将视图当做表一样查询即可。  
+在这里需要注意的是，虽然我们说视图是一个虚拟表，它不保存数据，但是它却可以获取数据。  
 
+实例：
+``` SQL
+select * from my_v1;
+select * from my_v2;
+select * from my_v3;
+```
+我们查询视图的结果和查询创建视图时as后面连接的select语句的结果完全相同。
+因此，我们也可以认为：创建视图，就是给一条select语句起别名，或者说是封装select语句。
+- - - - -
+## 23.4 修改视图
+视图本身不可修改，但是视图的来源（select）语句是可以修改的。因此，修改视图，就是修改视图的来源（select）语句。  
+基本语法：
+``` SQL
+alter view 视图名 as 新的select语句;
+```
 
+实例：
+``` SQL
+alter view my_v1 as select id, name, gender, age, c_id from student;
+```
+- - - - -
+## 23.5 删除视图
+基本语法：  
+``` SQL
+drop view 视图名;
+```
+- - - - -
+## 23.6 视图意义
+- 视图可以节省SQL语句，将一条负责的查询语句来进行分装，以后可以直接对视图进行操作
+- 数据安全，视图操作主要是针对查询的，如果对视图结构进行处理，例如删除，并不会影响基表的数据
+- 视图往往在大项目中使用，而且是多系统使用，可以对外提供有用的数据，但是隐藏关键（或无用）的数据
+- 视图是对外提供友好型的，不同的视图提供不同额数据，就如专门对外设计的一样
+- 视图可以更好（或者说，容易）进行权限控制
+- - - - -
+# 24、视图数据操作
+视图数据操作：虽然我们说视图可以称之为select语句的别名，实际上，它和别名不一样，因为视图是可以进行数据写操作的，只不多有很多限制而已。
+- - - - -
+## 24.1 新增数据
+在这里，新增数据就是指通过视图直接对基表进行数据的新增操作。  
+- 限制1：多表视图不能进行新增操作
+- 限制2：可以向单表视图新增数据，但视图中包含的字段必须有基表中所有不能为空的字段
+- - - - -
+## 24.2 删除数据
+与新增数据类似：
+- 多表不能删除数据
+- 单表数据可以删除数据
+- - - - -
+## 24.3 更新数据
+理论上，无论多表视图还是单表视图，都可以进行数据的更新。  
+此外，更新数据并不总是成功的，这是因为有更新限制的存在。  
+更新限制：with check option，如果创建视图的时候，设置了某个字段的限制，那么对视图进行更新操作的时候，系统就会进行验证，要保证更新之后，数据依然可以被查出来，否则不让更新。
+
+实例：
+``` SQL
+create view my_v4 as select * from student where height > 170 with check option;
+update my_v4 set height = 165 where id = 6;
+```
+- - - - -
+## 24.4 视图算法
+视图算发，即系统对视图以及外部查询视图的select语句的一种解析方式，视图算法有三种，分别为：  
+- underfined：未定义（默认的），这不是一种实际使用的算法，而是一个“推卸责任”的算法。在未定义的情况下，告诉系统，视图没有定义算法，请自己选择
+- template：临时表算法，系统先执行视图的select语句，后执行外部查询语句
+- merger：合并算法，系统先将视图对用的select语句与外部查询视图的select语句进行合并，然后再执行。此算法比较高效，且在未定义算法的时候，经常会默认选择此算法。
+指定视图算法，基本语法：
+``` SQL
+create [algorithm = template/merge/underfined] view 视图名 as select 语句;
+```
+- - - - -
+# 25、数据备份与还原
+基础概念：
+- 备份：将当前已有的数据或记录存一份
+- 还原：将数据恢复到备份时的状态
+为什么要进行数据备份与还原：  
+- 防止数据丢失
+- 保护数据记录
+数据备份与还原的方式有很多，具体可以分为：数据表备份、单表数据备份，SQL备份和增量备份。
+## 25.1 数据表备份
+数据表备份，不需要通过 SQL 来备份，我们可以直接进入到数据库文件夹复制对应的表结构以及数据；在需要还原数据的时候，直接将备份（复制）的内容放回去即可。  
+不过想要进行数据表备份是有前提条件的，因为不同的存储引擎之间是有区别的。  
+对于存储引擎，MySQL 主要使用两种，分别为：InnoDB 和 Myisam，两者均免费。  
+
+| 特点 | MyISAM | InnoDB | BDB | Memory | Archive |
+| --- | --- | --- | --- | --- | --- |
+| 批量插入的速度 | 搞 | 低 | 高 | 高 | 非常高 |
+| 事务安全 | —— | 支持 | 支持 | —— | —— |
+| 全文索引 | 支持 | 5.5版本支持 | —— | —— | —— |
+| 锁机制 | 表锁 | 行锁 | 页锁 | 表锁 | 行锁 |
+| 存储限制 | 没有 | 64TB | 没有 | 有 | 没有 |
+| B树索引 | 支持 | 支持 | 支持 | 支持 | —— |
+| 哈希索引 | —— | 支持 | —— | 支持 | —— |
+| 集群索引 | —— | 支持 | —— | —— | —— |
+| 数据索引 | —— | 支持 | —— | 支持 | —— |
+| 索引缓存 | 支持 | 支持 | —— | 支持 | —— |
+| 数据可压缩 | 支持 | —— | —— | —— | 支持 |
+| 空间使用 | 低 | 高 | 低 | N/A | 非常低 |
+| 内存使用 | 低 | 高 | 低 | 中等 | 低 |
+| 外键支持 | —— | 支持 | —— | —— | —— |
+
+其中，MyISAM和InnoDB的数据存储方式也有所区别：
+- MyISAM：表、索引和数据全部分开存储
+- InnoDB：只有表结构，数据全部存储在ibd文件中
+
+在linux上，MySQL文件默认存储在/var/lib/mysql中，例如：  
+``` shell
+[root@bigdata4 test]# ls
+db.opt        my_class.ibd  my_date.ibd     my_default.ibd  my_float.ibd     my_foreign2.ibd  my_foreign4.frm  my_int.frm   my_pri3.frm  my_set.frm      my_unique3.frm  my_v1.frm
+my_auto.frm   my_copy.frm   my_decimal.frm  my_enum.frm     my_foreign1.frm  my_foreign3.frm  my_foreign4.ibd  my_int.ibd   my_pri3.ibd  my_set.ibd      my_unique3.ibd  my_v2.frm
+my_auto.ibd   my_copy.ibd   my_decimal.ibd  my_enum.ibd     my_foreign1.ibd  my_foreign3.MYD  my_friend.frm    my_pri2.frm  my_pri.frm   my_unique2.frm  my_unique.frm   Student.frm
+my_class.frm  my_date.frm   my_default.frm  my_float.frm    my_foreign2.frm  my_foreign3.MYI  my_friend.ibd    my_pri2.ibd  my_pri.ibd   my_unique2.ibd  my_unique.ibd   Student.ibd
+```
+其中：
+- \*.frm：存储表的结构
+- \*.MYD：存储表的数据
+- \*.MYI：存储表的索引
+
+在这里，有一点需要我们注意，那就是：我们可以将通过 InnoDB 存储引擎产生的.frm和.idb文件复制到另一个数据库，也可以通过show tables命令查看复制过来的表名称，但是却无法获得数据。  
+- - - - -
+## 25.2 单数据表备份
+单数据表备份，每次只能备份一张表，而且只能备份数据，不能备份表结构。  
+通常的使用场景：将表中的数据导出到文件。  
+备份方法：  
+``` SQL
+select */字段列表 into outfile '文件存储路径' from 数据源;
+select */字段列表 from 数据源 into outfile '文件存储路径';
+```
+在这里，使用单表数据备份有一个前提，那就是：导出的外部文件不存在，即文件存储路径下的文件不存在。  
+
+实例：
+``` SQL
+select * into outfile '/home/class.txt' from my_class;
+```
+
+单表数据备份的高级操作，即自己指定字段和行的处理方式。  
+基本语法：  
+``` SQL
+select */字段列表 into outfile  '文件存储路径' fields 字段处理 lines 行处理 from 数据源;
+```
+字段处理：
+- enclosed by：指定字段用什么内容包括，模式是空字符串
+- terminated by：指定字段以什么技术，默认是\t
+- escaped by：指定特殊符号用什么方式处理，默认是\\
+
+行处理：
+- starting by：指定每行以什么开始，默认是空字符串
+- terminated by：指定每行以什么结束，默认是\r\n
+
+实例：
+``` SQL
+select * into outfile '/home/class.txt' fields enclosed by '"' terminated by ' | ' lines starting by 'START: ' from my_class; 
+```
+恢复数据，基本语法：
+``` SQL
+load data infile '文件路径' into table 表名 字段列表 fields 字段处理 lines 行处理;
+```
+- - - - -
+## 25.3 SQL备份
+SQL备份，备份的是SQL语句，进行SQL备份的时候，系统会对表结构以及数据进行处理，变成相应的SQL语句，然后执行备份，在还原的时候，只要执行备份的SQL语句即可，此种备份方式主要是针对表结构。  
+不过，MySQL并没有提供SQL备份的指令，如果我们想要进行SQL备份，则需要利用MySQL提供的软件mysqldump。  
+基本语法：  
+``` shell
+mysqldump -hPup 数据库名字 [表名1, [表名2] > 备份文件目录
+```
+其中，-hPup分别为：
+- h：IP或者localhost
+- P：端口号
+- u：用户名
+- p：密码
+
+实例：
+``` shell
+mysqldump -uroot -p123456 test class > class.sql
+```
+还原数据，基本语法：  
+方法1：使用mysql还原数据
+``` shell
+mysql -hPup 数据库名称 [表名1 [表名2]] < 备份目录
+```
+
+实例：
+``` shell
+mysql -uroot -p123456 test < class.sql
+```
+
+方法2：使用SQL命令还原数据  
+基本语法：  
+``` SQL
+source 备份文件目录;
+```
+
+实例：
+``` SQL
+source /home/class.sql
+```
+SQL备份的优缺点：
+- 优点：可以备份表结构
+- 缺点：增加额外的SQL命令，会浪费磁盘空间
+- - - - -
+## 25.4 增量备份
+增量备份，不是针对数据或者 SQL 进行备份，而是针对 MySQL 服务器的日志进行备份，其日志内容包括了我们对数据库的各种操作的历史记录，如增删改查等。此外，增量备份是指定时间段进行备份，因此备份的数据一般不会出现重复的情况，常用于大型项目的数据备份。
+- - - - -
+# 26、事务
+事务：一系列将要发生或正在发生的连续操作。  
+事务安全：是一种保护连续操作同时实现（完成）的机制，事务安全的意义就是，保证数据操作的完整性。  
+创建银行账户并插入数据：
+``` SQL
+create table bank_account(
+    id int primary key auto_increment,
+    cardno varchar(16) not null unique comment 'bank card number',
+    name varchar(20) not null,
+    money decimal(10, 2) default  0.0 comment 'account balance'
+) engine InnoDB charset utf8;
+insert into bank_account values
+(null, '0000000000000001', 'Harlon', 8000),
+(null, '0000000000000002', 'Jack', 5000);
+```
+## 26.1 事务操作
+事务操作，分为两种：自动事务，手动事务。  
+以银行的余额增减为例： 
+第1步，开启事务，告诉系统一下所有操作，不要直接写入数据，先保存到事务日志。  
+基本语法：  
+``` SQL
+start transaction;
+```
+第2不，减少Harlon账户的余额
+``` SQL
+update bank_account set money = money - 1000 where id = 1;
+select * from bank_account;
+```
+由于我们开启了事务操作，数据库中真实的数据，并没有同步更新，而是先写入事务日志。  
+第3步：增加Jack账户的余额  
+``` SQL
+update bank_account set money = money + 1000 where id = 2;
+select * from bank_account;
+```
+第4步：提交事务或回滚事务
+- 提交事务：commit
+- 回滚事务：rollback
+
+如果我们选择提交事务，则将事务日志存储的记录直接更新到数据库，并清除事务日志；如果我们选择回滚事务，则直接将事务日志清除，所有在开启事务至回滚事务之间的操作失效，保持原有的数据库记录不变。在这里，我们以提交事务为例：
+``` SQL
+commit;
+select * from bank_account;
+```
+目前，只有InnoDB支持事务操作。
+
+- - - - -
+## 26.2 事务原理
+事务原理：在事务开启之后，所有的操作都会被临时存储到事务日志，事务日志只有在收到commit命令之后，才会将操作同步到数据表，其他任何情况下都会清空事务日志，例如突然断开连接、收到rollback命令等。  
+接下来，简单分析一下MySQL的操作过程：  
+- Step1：客户端与服务端建立连接，同时开启一个临时的事务日志，此事务日志只作用于当前用户的当次连接；
+- Step2：在客户端用 SQL 语句执行写操作，客户端收到 SQL 语句，执行，将结果直接写入到数据表，并将数据表同步到数据库；
+- Step3：我们在客户端开启事务，则服务端原来的操作机制被改变，后续所有操作都会被先写入到临时日志文件；
+- Step4：在客户端执行 SQL 语句（例如写操作），服务端收到 SQL 语句，执行，将结果写入到临时日志文件，并不将结果同步到数据库；
+- Step5：在客户端执行查询操作，服务端直接从临时日志文件中捞取数据，返回给客户端；
+- Step6：在客户端执行commit或者rollback命令，清空临时日志文件，如果是commit命令，则将结果同步到数据库；如果是rollback命令，则不同步。
+
+- - - - -
+## 26.3 回滚点
+回滚点：在某个操作成功完成之后，后续的操作有可能成功也有可能失败，但无论后续操作的结果如何，前一次操作都已经成功，因此我们可以在当前成功的位置，设置一个操作点，其可以供后续操作返回该位置，而不是返回所有操作，这个点称之为回滚点。关于回滚点的基本语法为：
+- 设置回滚点：savepoint 回滚点名称
+- 返回回滚点：rollback to 回滚点名称
+
+实例：
+``` SQL
+select * from bank_account;
+start transaction;
+-- 发工资
+update bank_account set money = money + 10000 where id = 1;
+savepoint spone;
+-- 扣税，错误
+update bank_account set money = money - 10000 * 0.05 where id = 2;
+select * from bank_account;
+rollback to spone;
+-- 扣税，成功
+update bank_account set money = money - 10000 * 0.05 where id = 1;
+select * from bank_account;
+commit;
+```
+- - - - -
+## 26.4 自动事务
+在 MySQL 中，默认的都是自动事务处理，即用户在操作完成之后，其操作结果会立即被同步到数据库中。  
+自动事务是通过autocommit变量控制的，我们可以通过如下SQL语句，进行查看：
+``` SQL
+show variables like 'autocommit';
+```
+- 开启自动事务处理：set autocommit = on / 1;
+- 关闭自动事务处理：set autocommit = off / 0;
+
+- - - - -
+## 26.5 事务特性
+事务的特性，可以概括为ACID，具体为：  
+- 原子性：Atomic，表示事务的整个操作都是一个整体，不可分割，要么全部成功，要么全部失败
+- 一致性：Consistency，表示事务操作的前后，数据表中的数据处于一致状态
+- 隔离性：Isolation，表示不同的事务操作之间是互相隔离的，互不影响
+- 持久性：Durability，表示事务一旦提交，将不可修改，永久性的改变数据表中的数据
+
+- - - - -
+# 27、数据库变量
+在MySQL数据库中，变量有两种，分别为：系统变量和自定义变量。  
+根据变量的作用范围，又分为：  
+- 会话级别变量：仅对当前客户端当次连接有效
+- 全局级别变量：对所有客户端的任一次连接有效
+## 27.1 系统变量
+系统变量，顾名思义，是系统设置好的变量（皆为全局级别变量），也是用来控制服务器表现的，如autocommit、wait_timeout等。  
+大多数的时候，我们并不需要使用系统变量，但我们仍然需要了解有这么回事，在必须要的时候，它可以帮助我们完成特殊的需求。  
+查看系统变量，语法为：  
+``` SQL
+show variables;
+```
+查看具体的系统变量的值，语法为：
+``` SQL
+select @@变量名 [, @@变量名2];
+```
+实例：
+``` SQL
+mysql> select @@autocommit, @@version, @@version_compile_os, @@wait_timeout;
++--------------+-----------+----------------------+----------------+
+| @@autocommit | @@version | @@version_compile_os | @@wait_timeout |
++--------------+-----------+----------------------+----------------+
+|            1 | 5.6.39    | Linux                |          28800 |
++--------------+-----------+----------------------+----------------+
+```
+修改会话级别变量，有两种方法，语法分别为：
+- 基本语法1：set 变量名 = 值
+- 基本语法2：set @@变量名= 值
+
+对于修改全局级别变量，语法为：
+- 基本语法：set global 变量名= 值
+- - - - -
+## 27.2 自定义变量
+自定义变量，顾名思义，是用户自定义的变量，并且都是会话级别的变量。  
+系统为了区别系统变量与自定义变量，规定用户自定义的变量必须使用一个@符号，设置子定义变量的语法为：
+- 基本语法： set @变量名 = 值;
+
+实例：
+``` SQL
+mysql> set @name = 'harlon';
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select @name;
++--------+
+| @name  |
++--------+
+| harlon |
++--------+
+1 row in set (0.00 sec)
+```
+注意：在 MySQL 中，很多地方会默认将=处理为比较符号，因此 MySQL 还提供了另外一种赋值符号:=，即冒号与等号拼接而成的符号。  
+此外，MySQL允许我们从数据表中获取数据，然后直接赋值给变量，共两种方式：
+第1种：边复制，边查看结果。语法为：
+``` SQL
+select @变量名 := 字段名 from 表名;
+```
+
+实例：
+``` SQL
+select @name = name from student;
+select @name;
+```
+
+第2种：只赋值，不查看结果。语法为：
+``` SQL
+select 字段列表 from 表名 into 变量列表;
+```
+
+实例：
+``` SQL
+select name from student where id = 2 into @name;
+select @name;
+select * from student;
+```
+注意：自定义变量都是会话级别，只要是当前用户当次连接，都会受到影响，不区分数据库。
+- - - - -
+# 28、触发器
+触发器：trigger，是指实现为某张表绑定一段代码，当表中的某些内容发生变化（增、删、改）的时候，系统会自动触发代码执行。  
+触发器包含三个要素，分别为：
+- 事件类型：增删改，即insert、delete和update
+- 触发时间：事件类型前和后，即before和after
+- 触发对象：表中的每一套记录（行），即整张表
+
+每张表只能拥有一种触发时间和一种事件类型的触发器，即每张表最多可以拥有6种触发器。
+## 28.1 创建触发器
 
 
