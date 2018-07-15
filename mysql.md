@@ -2134,7 +2134,7 @@ begin
 触发器内容主体，每行用分号结尾  
 end  
 自定义符号  
-delimiter  
+delimiter ;
 ```
 
   
@@ -2154,4 +2154,153 @@ create table orders(
     goods_id int not null,
     goods_number int default 1
 ) engine InnoDB charset utf8;
+```
+创建触发器：
+``` SQL
+delimiter $$
+create trigger after_order after insert on orders for each row
+begin
+    update goods set inventory = inventory - 1 where id = 1;
+end
+$$
+delimiter ;
+```
+
+- - - - -
+## 28.2 查询触发器
+查询所有触发器或模糊匹配：  
+基本语法：  
+``` SQL
+show triggers [like 'pattern']
+```
+
+实例：
+``` SQL
+show triggers\G;
+```
+\G表示旋转
+
+当然，我们可以查询创建触发器的语句。  
+基本语法：  
+``` SQL
+show create trigger 触发器名称;
+```
+此外，所有的触发器都会被系统保持到information_schema.triggers这张表中，执行如下SQL，进行测试：
+``` SQL
+select * from information_schema.triggers\G;
+```
+- - - - -
+## 28.3 使用触发器
+实际上，触发器不是我们手动触发，而是在某种情况发生的时候自动触发，例如我们上面创建的after_order触发器，当我们insert订单表的时候，该触发器自动执行。执行如下SQL语句，进行测试：
+``` SQL
+mysql> select * from goods;
++----+---------+---------+-----------+
+| id | name    | price   | inventory |
++----+---------+---------+-----------+
+|  1 | iPhoneX | 7488.00 |      1000 |
+|  2 | iPhone8 | 5088.00 |      1000 |
++----+---------+---------+-----------+
+2 rows in set (0.00 sec)
+
+mysql> select * from orders;
+Empty set (0.00 sec)
+
+mysql> insert into orders values(null, 2, 10);
+Query OK, 1 row affected (0.00 sec)
+
+mysql> select * from goods;
++----+---------+---------+-----------+
+| id | name    | price   | inventory |
++----+---------+---------+-----------+
+|  1 | iPhoneX | 7488.00 |       999 |
+|  2 | iPhone8 | 5088.00 |      1000 |
++----+---------+---------+-----------+
+2 rows in set (0.00 sec)
+
+mysql> select * from orders;
++----+----------+--------------+
+| id | goods_id | goods_number |
++----+----------+--------------+
+|  1 |        2 |           10 |
++----+----------+---------
+```
+注意：触发器的触发对象和事件类型，决不能同触发器主体的内容相同，防止发生死循环。
+- - - - -
+## 28.4 修改触发器 & 删除触发器
+触发器不能修改，只能删除。因此，当我们需要修改触发器的时候，唯一的办法就是：先删除，后新增。  
+基本语法：  
+``` SQL
+drop trigger 触发器名称;
+```
+
+实例：  
+``` SQL
+drop trigger after_oder;
+show triggers; 
+```
+- - - - -
+## 28.5 触发器记录
+触发器记录：无论触发器是否触发，只要当某种操作准备执行，系统就会将当前操作的记录的当前状态和即将执行之后的状态分别记录下来，供触发器使用。其中，当前状态被保存到old中，操作之后的状态被保存到new中。其中old和new保存如下字段：
+- ACTION_REFERENCE_OLD_ROW：OLD
+- ACTION_REFERENCE_NEW_ROW：NEW
+
+其中：  
+- OLD：代表是旧记录，也就是当前记录的状态，插入时没有OLD
+- NEW：代表新记录，也就是假设操作发生之后记录的状态，删除时没有NEW
+无论OLD还是 NEW，都代表记录本身，而且任何一条记录除了有数据，还有字段名。因此，使用OLD和 NEW的方法就是：  
+基本语法：  
+``` SQL
+OLD/NEW + . + 字段名
+```
+
+实例：
+``` SQL
+delimiter $$
+create trigger after_order_new after insert on orders for each row
+begin
+    update goods set inventory = inventory - NEW.goods_number where id = NEW.goods_id;
+end
+$$
+delimiter ;
+```
+
+实例：
+``` SQL
+mysql> select * from goods;
++----+---------+---------+-----------+
+| id | name    | price   | inventory |
++----+---------+---------+-----------+
+|  1 | iPhoneX | 7488.00 |       999 |
+|  2 | iPhone8 | 5088.00 |      1000 |
++----+---------+---------+-----------+
+2 rows in set (0.00 sec)
+
+mysql> select * from orders;
++----+----------+--------------+
+| id | goods_id | goods_number |
++----+----------+--------------+
+|  1 |        2 |           10 |
++----+----------+--------------+
+1 row in set (0.00 sec)
+
+mysql> insert into orders values(null, 2, 10);
+Query OK, 1 row affected (0.00 sec)
+
+mysql> select * from goods;
++----+---------+---------+-----------+
+| id | name    | price   | inventory |
++----+---------+---------+-----------+
+|  1 | iPhoneX | 7488.00 |       999 |
+|  2 | iPhone8 | 5088.00 |       990 |
++----+---------+---------+-----------+
+2 rows in set (0.00 sec)
+
+mysql> select * from orders;
++----+----------+--------------+
+| id | goods_id | goods_number |
++----+----------+--------------+
+|  1 |        2 |           10 |
+|  3 |        2 |           10 |
++----+----------+--------------+
+2 rows in set (0.00 sec)
 ```
