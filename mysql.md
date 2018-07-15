@@ -2304,3 +2304,329 @@ mysql> select * from orders;
 +----+----------+--------------+
 2 rows in set (0.00 sec)
 ```
+- - - - -
+# 29、代码执行结构
+在MySQL编程中，代码的执行结构有三种，分别为：  
+- 顺序结构
+- 分支结构
+- 循环结构
+
+下面主要说分支结构和循环结构。
+- - - - -
+## 29.1 分支结构
+分支结构：事先准备多个代码代码块，通过判断条件是否满足，执行对应的代码。
+在MySQL中，只有if分支结构，其基本语法为：
+``` SQL
+if 判断条件 then
+    -- 满足条件时，要执行的代码
+esle
+    -- 不满足条件时，要执行的代码
+end if;
+```
+
+接下来，我们利用触发器和if分支，完成这样的需求：  
+在生成订单前，判断商品的库存是否满足，如果满足，则插入订单；否则插入失败。
+实例：
+``` SQL
+delimiter $$
+create trigger before_order before insert on orders for each row
+begin
+    select inventory from goods where id = NEW.goods_id into @inventory;
+    if @inventory < NEW.goods_number then
+        insert into xxx values(xxx);
+    end if;
+end
+$$
+delimiter ;
+```
+- - - - -
+## 29.2 循环结构
+在MySQL中，循环有while循环、loop循环和repeat循环，还有非标准的goto循环，这里介绍while循环，其基本语法为：
+``` SQL
+while 条件判断 do
+    -- 满足条件要执行的代码
+end while;
+```
+在使用循环结构的时候，我们经常需要对循环进行控制，即在循环结构内部进行判断和控制。虽然在 MySQL 中没有continue和break，但是有其替代关键字：
+- iterate：迭代，类似于continue，表示结束本次循环，不执行后续步骤，直接开始下一次循环
+- leave：离开，类似于break，直接结束整个循环
+
+上述两个关键字的使用方法为：  
+基本语法：  
+``` SQL
+iterate/leave 循环名称;
+```
+- - - - -
+# 30、函数
+函数，就是将一段代码封装到一个结构中，在需要执行该代码的时候，直接调用该结构（函数）执行即可。此操作，实现了代码的复用。在MySQL中，函数有两种，分别为：系统函数和自定义函数。
+
+## 30.1 系统函数
+任何函数都有返回值（对于空函数，我们认为其返回值为空），而且在MySQL中任何返回值的操作都是通过select来操作的，因此MySQL的函数调用就是通过select来实现的。  
+下面，我们介绍一些常见的、对字符进行操作的系统函数：首先，执行如下语句，定义一些变量：
+``` SQL
+set @cn = '你好世界';
+set @en = 'hello world';
+set @one = 'harlon';
+set @two = 'jack';
+set @three = 'jack';
+
+select @cn, @en, @one, @two, @three;
+```
+
+字符串函数：
+- substring，截取字符串，单位为字符。
+
+``` SQL
+mysql> select substring(@cn, 1, 1), substring(@en, 1, 2);
++----------------------+----------------------+
+| substring(@cn, 1, 1) | substring(@en, 1, 2) |
++----------------------+----------------------+
+| 你                   | he                   |
++----------------------+----------------------+
+1 row in set (0.00 sec)
+```
+
+- instr，判断字符串中某个子串是否存在，若存在返回具体的位置，不存在返回0。
+
+mysql> select instr(@cn, '你好'), instr(@cn, '世'), instr(@en, 'c'); 
++----------------------+-------------------+-----------------+
+| instr(@cn, '你好')   | instr(@cn, '世')  | instr(@en, 'c') |
++----------------------+-------------------+-----------------+
+|                    1 |                 3 |               0 |
++----------------------+-------------------+-----------------+
+1 row in set (0.00 sec)
+
+
+- lpad：左填充，将字符串按照某个指定的填充方式，填充到指定长度。
+
+``` SQL
+mysql> select lpad(@cn, 20, '曾经'), lpad(@cn, 20, 'hello');
++--------------------------------------------------------------+------------------------------+
+| lpad(@cn, 20, '曾经')                                        | lpad(@cn, 20, 'hello')       |
++--------------------------------------------------------------+------------------------------+
+| 曾经曾经曾经曾经曾经曾经曾经曾经你好世界                     | hellohellohelloh你好世界     |
++--------------------------------------------------------------+------------------------------+
+1 row in set (0.00 sec)
+```
+
+- insert，找到目标位置，将指定长度的字符串替换为目标字符串。
+
+``` SQL
+mysql> select insert(@en, 2, 4, 'i'), @en;
++------------------------+-------------+
+| insert(@en, 2, 4, 'i') | @en         |
++------------------------+-------------+
+| hi world               | hello world |
++------------------------+-------------+
+1 row in set (0.00 sec)
+```
+
+- strcmp，比较字符串的大小。
+
+``` SQL
+
+mysql> select strcmp(@one, @two), strcmp(@two, @three), strcmp(@three, @one);
++--------------------+----------------------+----------------------+
+| strcmp(@one, @two) | strcmp(@two, @three) | strcmp(@three, @one) |
++--------------------+----------------------+----------------------+
+|                 -1 |                    0 |                    1 |
++--------------------+-----------
+```
+- - - - -
+## 30.2 自定义函数
+对于任意一个函数，都包含如下要素：
+- 函数名
+- 参数列表
+- 返回值
+- 函数体
+
+- - - - -
+## 30.3 创建函数
+基本语法：
+``` SQL
+create function 函数名([参数列表]) returns 数据类型
+begin
+    -- 函数体
+end
+```
+
+实例：
+``` SQL
+create function showLove() returns int
+return 521;
+
+select showLove();
+```
+- - - - -
+## 30.4 查看函数
+查看函数，基本语法为：
+``` SQL
+show function status + [like 'pattern']
+```
+查看函数的创建语句，基本语法为：
+``` SQL
+show create function 函数名;
+```
+- - - - -
+## 30.5 修改函数 & 删除函数
+函数只能先删除后新增，不能修改，删除函数的基本语法为：
+``` SQL
+drop function 函数名;
+```
+- - - - -
+## 30.6 函数参数
+对于函数的参数，一共有两种，分别为形参和实参，其中，形参可以理解为定义函数时使用的参数，且形参必须指定数据类型；实参可以理解为在调用函数时传入的值或变量。因此，函数定义的具体形式应该为：
+``` SQL
+function 函数名(形参名字 形参类型) returns 返回数据类型
+```
+定义一个函数，求1到指定数值的和。
+``` SQL
+delimiter $$
+create function addAll(num int) returns int
+begin
+    set @i = 1;
+    set @res = 0;
+    while @i < num do
+        set @res = @res + @i;
+        set @i = @i +1;
+    end while;
+    return @res;
+end
+$$
+delimiter ;
+
+mysql> select addAll(100);
++-------------+
+| addAll(100) |
++-------------+
+|        4950 |
++-------------+
+1 row in set (0.01 sec)
+
+mysql> select @i, @res;
++------+------+
+| @i   | @res |
++------+------+
+|  100 | 4950 |
++------+------+
+1 row in set (0.00 sec)
+```
+- - - - -
+## 30.7 变量作用域
+在 MySQL 中，变量的作用域有两种，分别为全局和局部，其中，全局变量可以在任何地方使用；局部变量只能在函数内部使用。
+- 全局变量：使用set关键字定义，用@符号标识
+- 局部变量：使用declare关键字声明，且所用的局部变量必须在函数体开始之前进行声明
+
+定义一个函数，即求1到指定数值的和，要求10的倍数不加，代码如下：
+``` SQL
+delimiter $$
+create function addAll2(num int) returns int
+begin
+    declare i int default 1;
+    declare res int default 0;
+    mywhile:while @i < num do
+        if i % 10 = 0 then
+            set i = i + 1;
+            iterate mywhile;
+    end if;
+    set res = res + i;
+    set i = i + 1;
+    end while;
+    return @res;
+end
+$$
+delimiter ;
+
+mysql> select addAll(100), addAll(200);
++-------------+-------------+
+| addAll(100) | addAll(200) |
++-------------+-------------+
+|        4950 |       19900 |
++-------------+-------------+
+1 row in set (0.00 sec)
+```
+- - - - -
+# 31、存储过程
+存储过程：produce，是一种用来处理数据（增删改）的方式，简单点，我们也可以将其理解为没有返回值的函数。
+## 31.1 创建过程
+基本语法：
+``` SQL
+create proceduce 过程名([参数列表])
+begin
+    -- 过程体
+end
+```
+
+实例：
+``` SQL
+create procedure pro()
+select * from student;
+```
+- - - - -
+## 32.2 查看过程
+查看过程，基本语法为：
+``` SQL
+show procedure status [like 'pattern'];
+```
+查看过程的创建语句，基本语法为：
+``` SQL
+show create procedure 过程名;
+```
+- - - - -
+## 32.3 调用过程
+基本语法：
+``` SQL
+call 过程名;
+```
+- - - - -
+## 33.3 修改过程 & 删除过程
+过程只能先删除后新增，不能修改。删除过程的基本语法为：
+``` SQL
+drop procedure 过程名;
+```
+- - - - -
+## 33.4 过程参数
+函数的参数需要指定数据类型，过程比函数更加严格。过程有三种自己的参数类型，分别为：
+- in：数据只是从过程外部传入给过程内部使用，可以使数值也可以使变量
+- out：参数只能传递变量，且变量指向的数据需要先清空然后才能进入过程内部，该引用供过程内部使用，过程结束后可以将变量的值传递给过程外部使用
+- inout：此参数只能传递变量，该变量的值可以给过程内部使用，过程结束后可以变量的值传递给过程外部使用
+
+因此，过程定义的具体形式应该为：
+``` SQL
+procedure 过程名(in 参数名字 参数类型, out 参数名字 参数类型, inout 参数名字 参数类型)
+```
+
+实例：
+``` SQL
+delimiter $$
+create procedure pro2(in var1 int, out var2 int, inout var3 int)
+begin
+    select var1, var2, var3;
+end
+$$
+delimiter ;
+```
+
+测试：
+``` SQL
+set @var1 = 1;
+set @var2 = 2;
+set @var3 = 3;
+mysql> call pro2(@var1, @var2, @var3);
++------+------+------+
+| var1 | var2 | var3 |
++------+------+------+
+|    1 | NULL |    3 |
++------+------+------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select @var1, @var2, @var3;
++-------+-------+-------+
+| @var1 | @var2 | @var3 |
++-------+-------+-------+
+|     1 |  NULL |     3 |   
++-------+-------+-------+
+1 row in set (0.00 sec)
+```
