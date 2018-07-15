@@ -2127,5 +2127,18 @@ select * from student;
 
 每张表只能拥有一种触发时间和一种事件类型的触发器，即每张表最多可以拥有6种触发器。
 ## 28.1 创建触发器
+``` SQL
+delimiter 自定义符号  
+create trigger 触发器名称 触发器时间 事件类型 on 表名 for each row  
+begin  
+触发器内容主体，每行用分号结尾  
+end  
+自定义符号  
+delimiter  
+```
 
+  
+根据上述案例的需求，我们创建两张表，商品表goods和订单表orders，SQL语句如下：  
+``` SQL
 
+```
